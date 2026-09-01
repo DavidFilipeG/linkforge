@@ -1,2 +1,14 @@
 # Dependencies
 node_modules/
+
+# Builds
+dist/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Operating system
+.DS_Store
