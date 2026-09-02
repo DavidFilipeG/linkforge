@@ -41,4 +41,20 @@ export async function linksRoutes(app: FastifyInstance) {
 
     return reply.code(201).send(link);
   });
+
+  app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
+    const code = request.params.code;
+
+    const link = links.find((link) => link.code === code);
+
+    if (!link) {
+      return reply.code(404).send({
+        error: 'Not found',
+        message: 'Link not found',
+        statusCode: 404,
+      });
+    }
+
+    return reply.redirect(link.originalUrl);
+  });
 }
