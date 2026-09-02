@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { linksRoutes } from './modules/links/links.routes.js';
 
 const app = Fastify({
   logger: true,
@@ -9,6 +10,8 @@ app.get('/health', async () => {
     status: 'ok',
   };
 });
+
+app.register(linksRoutes);
 
 const start = async () => {
   try {
