@@ -30,7 +30,11 @@ export async function linksRoutes(app: FastifyInstance) {
       });
     }
 
-    const code = generateCode();
+    let code: string;
+
+    do {
+      code = generateCode();
+    } while (links.some((link) => link.code === code));
 
     const link: Link = {
       code: code,
