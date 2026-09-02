@@ -1,13 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { generateCode } from '../../utils/generateCode.js';
 import { isValidUrl } from '../../utils/isValidUrl.js';
-
-type Link = {
-  originalUrl: string;
-  code: string;
-};
-
-const links: Link[] = [];
+import { codeExists, createLink, getLink } from './links.repository.js';
+import { Link } from './links.types.js';
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post<{ Body: { url: string } }>('/links', async (request, reply) => {
@@ -34,14 +29,14 @@ export async function linksRoutes(app: FastifyInstance) {
 
     do {
       code = generateCode();
-    } while (links.some((link) => link.code === code));
+    } while (codeExists(code));
+
+    createLink(code, url);
 
     const link: Link = {
       code: code,
       originalUrl: url,
     };
-
-    links.push(link);
 
     return reply.code(201).send(link);
   });
@@ -49,7 +44,7 @@ export async function linksRoutes(app: FastifyInstance) {
   app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
     const code = request.params.code;
 
-    const link = links.find((link) => link.code === code);
+    const link = getLink(code);
 
     if (!link) {
       return reply.code(404).send({
