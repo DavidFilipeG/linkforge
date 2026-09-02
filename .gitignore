@@ -12,3 +12,8 @@ dist/
 
 # Operating system
 .DS_Store
+
+# Database
+*.db
+*.db-shm
+*.db-wal
