@@ -5,10 +5,18 @@ import { codeExists, createLink, getLink } from './links.repository.js';
 import { env } from '../../config/env.js';
 import { isValidAlias } from '../../utils/isValidAlias.js';
 import { RESERVED_ALIASES } from './links.constants.js';
+import { isValidDate } from '../../utils/isValidDate.js';
+import { isFutureDate } from '../../utils/isFutureDate.js';
 
 export async function linksRoutes(app: FastifyInstance) {
-  app.post<{ Body: { url: string; alias?: string } }>('/links', async (request, reply) => {
-    const { url, alias } = request.body;
+  app.post<{
+    Body: {
+      url: string;
+      alias?: string;
+      expiresAt?: string;
+    };
+  }>('/links', async (request, reply) => {
+    const { url, alias, expiresAt } = request.body;
 
     if (!url) {
       return reply.code(400).send({
@@ -24,6 +32,24 @@ export async function linksRoutes(app: FastifyInstance) {
         message: 'The URL must be valid and use http:// or https://',
         statusCode: 400,
       });
+    }
+
+    if (expiresAt) {
+      if (!isValidDate(expiresAt)) {
+        return reply.code(400).send({
+          error: 'Bad request',
+          message: 'The expiresAt is invalid date',
+          statusCode: 400,
+        });
+      }
+
+      if (!isFutureDate(expiresAt)) {
+        return reply.code(400).send({
+          error: 'Bad request',
+          message: 'The expiresAt value cannot be in the past.',
+          statusCode: 400,
+        });
+      }
     }
 
     let code: string;
@@ -63,7 +89,9 @@ export async function linksRoutes(app: FastifyInstance) {
       } while (codeExists(code));
     }
 
-    const link = createLink(code, url);
+    const normalizedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : null;
+
+    const link = createLink(code, url, normalizedExpiresAt);
 
     return reply.code(201).send({
       ...link,
@@ -81,6 +109,14 @@ export async function linksRoutes(app: FastifyInstance) {
         error: 'Not found',
         message: 'Link not found',
         statusCode: 404,
+      });
+    }
+
+    if (link.expiresAt && new Date(link.expiresAt) <= new Date()) {
+      return reply.code(410).send({
+        error: 'Gone',
+        message: 'Link has expired',
+        statusCode: 410,
       });
     }
 
