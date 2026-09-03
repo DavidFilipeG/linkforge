@@ -1,3 +1,5 @@
 import Database from 'better-sqlite3';
 
-export const db = new Database('linkforge.db');
+const databasePath = process.env.NODE_ENV === 'test' ? ':memory:' : 'linkforge.db';
+
+export const db = new Database(databasePath);
