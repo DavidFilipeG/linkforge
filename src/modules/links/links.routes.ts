@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { generateCode } from '../../utils/generateCode.js';
 import { isValidUrl } from '../../utils/isValidUrl.js';
 import { codeExists, createLink, getLink } from './links.repository.js';
+import { env } from '../../config/env.js';
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post<{ Body: { url: string } }>('/links', async (request, reply) => {
@@ -32,7 +33,10 @@ export async function linksRoutes(app: FastifyInstance) {
 
     const link = createLink(code, url);
 
-    return reply.code(201).send(link);
+    return reply.code(201).send({
+      ...link,
+      shortUrl: `${env.baseUrl}${link.code}`,
+    });
   });
 
   app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
