@@ -1,13 +1,21 @@
 import { db } from '../../database/connection.js';
 import { Link } from './links.types.js';
 
-export function createLink(code: string, originalUrl: string) {
+export function createLink(code: string, originalUrl: string): Link {
   const statement = db.prepare(`
     INSERT INTO links (code, original_url)
     VALUES (?, ?)
   `);
 
   statement.run(code, originalUrl);
+
+  const link = getLink(code);
+
+  if (!link) {
+    throw new Error('Failed to retrieve created link');
+  }
+
+  return link;
 }
 
 export function getLink(code: string): Link | undefined {

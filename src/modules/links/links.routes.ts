@@ -2,7 +2,6 @@ import { FastifyInstance } from 'fastify';
 import { generateCode } from '../../utils/generateCode.js';
 import { isValidUrl } from '../../utils/isValidUrl.js';
 import { codeExists, createLink, getLink } from './links.repository.js';
-import { Link } from './links.types.js';
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post<{ Body: { url: string } }>('/links', async (request, reply) => {
@@ -31,12 +30,7 @@ export async function linksRoutes(app: FastifyInstance) {
       code = generateCode();
     } while (codeExists(code));
 
-    createLink(code, url);
-
-    const link: Link = {
-      code: code,
-      originalUrl: url,
-    };
+    const link = createLink(code, url);
 
     return reply.code(201).send(link);
   });
