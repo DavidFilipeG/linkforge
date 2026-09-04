@@ -1,25 +1,14 @@
-import Fastify from 'fastify';
-import { linksRoutes } from './modules/links/links.routes.js';
-import { initDatabase } from './database/init.js';
+import { buildApp } from './app.js';
+import { env } from './config/env.js';
 
-const app = Fastify({
-  logger: true,
-});
+const app = buildApp();
 
-initDatabase();
-
-app.get('/health', async () => {
-  return {
-    status: 'ok',
-  };
-});
-
-app.register(linksRoutes);
+const port = Number(env.port);
 
 const start = async () => {
   try {
     await app.listen({
-      port: 3000,
+      port,
       host: '0.0.0.0',
     });
   } catch (error) {

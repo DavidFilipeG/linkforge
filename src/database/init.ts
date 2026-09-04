@@ -1,4 +1,5 @@
 import { db } from './connection.js';
+import { runMigrations } from './migrations/index.js';
 
 export function initDatabase() {
   db.exec(`
@@ -9,4 +10,6 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  runMigrations();
 }
