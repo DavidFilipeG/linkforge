@@ -5,8 +5,8 @@ import { clearDatabase } from './helpers/database.js';
 let app: ReturnType<typeof buildApp>;
 
 beforeEach(() => {
-  clearDatabase();
   app = buildApp();
+  clearDatabase();
 });
 
 afterEach(async () => {
@@ -31,6 +31,7 @@ describe('POST /links', () => {
     expect(body.originalUrl).toBe('https://github.com');
     expect(body.code).toBeDefined();
     expect(body.shortUrl).toBeDefined();
+    expect(body.expiresAt).toBeNull();
   });
 
   it('should return 400 when URL is missing', async () => {
@@ -147,14 +148,18 @@ describe('POST /links', () => {
   });
 
   it('should create a short link with an expiration date', async () => {
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    vi.useFakeTimers({
+      toFake: ['Date'],
+    });
+
+    vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
 
     const response = await app.inject({
       method: 'POST',
       url: '/links',
       payload: {
         url: 'https://github.com',
-        expiresAt,
+        expiresAt: '2026-09-04T11:00:00.000Z',
       },
     });
 
@@ -163,7 +168,7 @@ describe('POST /links', () => {
     const body = response.json();
 
     expect(body.originalUrl).toBe('https://github.com');
-    expect(body.expiresAt).toBe(expiresAt);
+    expect(body.expiresAt).toBe('2026-09-04T11:00:00.000Z');
     expect(body.code).toBeDefined();
     expect(body.shortUrl).toBeDefined();
   });
@@ -186,14 +191,18 @@ describe('POST /links', () => {
   });
 
   it('should return 400 when expiration date is in the past', async () => {
-    const expiresAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    vi.useFakeTimers({
+      toFake: ['Date'],
+    });
+
+    vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
 
     const response = await app.inject({
       method: 'POST',
       url: '/links',
       payload: {
         url: 'https://github.com',
-        expiresAt,
+        expiresAt: '2026-09-04T09:00:00.000Z',
       },
     });
 
@@ -243,7 +252,10 @@ describe('GET /:code', () => {
   });
 
   it('should redirect when link has not expired', async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({
+      toFake: ['Date'],
+    });
+
     vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
 
     const createResponse = await app.inject({
@@ -268,7 +280,10 @@ describe('GET /:code', () => {
   });
 
   it('should return 410 when link has expired', async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({
+      toFake: ['Date'],
+    });
+
     vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
 
     const createResponse = await app.inject({
