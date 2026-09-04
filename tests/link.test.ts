@@ -312,3 +312,150 @@ describe('GET /:code', () => {
     expect(body.message).toBe('Link has expired');
   });
 });
+
+describe('GET /links/:code', () => {
+  it('should return link details', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/links',
+      payload: {
+        url: 'https://github.com',
+        alias: 'github',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/links/github',
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    const body = response.json();
+
+    expect(body.code).toBe('github');
+    expect(body.originalUrl).toBe('https://github.com');
+    expect(body.shortUrl).toBeDefined();
+    expect(body.expiresAt).toBeNull();
+    expect(body.clickCount).toBe(0);
+  });
+
+  it('should return 404 when link does not exist', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/links/does-not-exist',
+    });
+
+    expect(response.statusCode).toBe(404);
+
+    const body = response.json();
+
+    expect(body.message).toBe('Link not found');
+  });
+
+  it('should increment click count when link is accessed', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/links',
+      payload: {
+        url: 'https://github.com',
+        alias: 'github',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const redirectResponse = await app.inject({
+      method: 'GET',
+      url: '/github',
+    });
+
+    expect(redirectResponse.statusCode).toBe(302);
+
+    const statsResponse = await app.inject({
+      method: 'GET',
+      url: '/links/github',
+    });
+
+    expect(statsResponse.statusCode).toBe(200);
+
+    const body = statsResponse.json();
+
+    expect(body.clickCount).toBe(1);
+  });
+
+  it('should increment click count on every redirect', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/links',
+      payload: {
+        url: 'https://github.com',
+        alias: 'github',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+
+    for (let i = 0; i < 3; i += 1) {
+      const redirectResponse = await app.inject({
+        method: 'GET',
+        url: '/github',
+      });
+
+      expect(redirectResponse.statusCode).toBe(302);
+    }
+
+    const statsResponse = await app.inject({
+      method: 'GET',
+      url: '/links/github',
+    });
+
+    expect(statsResponse.statusCode).toBe(200);
+
+    const body = statsResponse.json();
+
+    expect(body.clickCount).toBe(3);
+  });
+
+  it('should not increment click count when link has expired', async () => {
+    vi.useFakeTimers({
+      toFake: ['Date'],
+    });
+
+    vi.setSystemTime(new Date('2026-09-04T10:00:00.000Z'));
+
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/links',
+      payload: {
+        url: 'https://github.com',
+        alias: 'expired-link',
+        expiresAt: '2026-09-04T11:00:00.000Z',
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+
+    vi.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
+
+    const redirectResponse = await app.inject({
+      method: 'GET',
+      url: '/expired-link',
+    });
+
+    expect(redirectResponse.statusCode).toBe(410);
+
+    const statsResponse = await app.inject({
+      method: 'GET',
+      url: '/links/expired-link',
+    });
+
+    expect(statsResponse.statusCode).toBe(200);
+
+    const body = statsResponse.json();
+
+    expect(body.clickCount).toBe(0);
+  });
+});
