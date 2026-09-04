@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { generateCode } from '../../utils/generateCode.js';
 import { isValidUrl } from '../../utils/isValidUrl.js';
-import { codeExists, createLink, getLink } from './links.repository.js';
+import { codeExists, createLink, getLink, incrementClickCount } from './links.repository.js';
 import { env } from '../../config/env.js';
 import { isValidAlias } from '../../utils/isValidAlias.js';
 import { RESERVED_ALIASES } from './links.constants.js';
@@ -120,6 +120,30 @@ export async function linksRoutes(app: FastifyInstance) {
       });
     }
 
+    incrementClickCount(code);
+
     return reply.redirect(link.originalUrl);
+  });
+
+  app.get<{ Params: { code: string } }>('/links/:code', async (request, reply) => {
+    const code = request.params.code;
+
+    const link = getLink(code);
+
+    if (!link) {
+      return reply.code(404).send({
+        error: 'Not found',
+        message: 'Link not found',
+        statusCode: 404,
+      });
+    }
+
+    return reply.code(200).send({
+      code: link.code,
+      originalUrl: link.originalUrl,
+      shortUrl: `${env.baseUrl}/${link.code}`,
+      expiresAt: link.expiresAt,
+      clickCount: link.clickCount,
+    });
   });
 }

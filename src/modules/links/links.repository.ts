@@ -23,7 +23,8 @@ export function getLink(code: string): Link | undefined {
     SELECT
       code,
       original_url AS originalUrl,
-      expires_at as expiresAt
+      expires_at as expiresAt,
+      click_count as clickCount
     FROM links
     WHERE code = ?
   `);
@@ -33,4 +34,14 @@ export function getLink(code: string): Link | undefined {
 
 export function codeExists(code: string): boolean {
   return Boolean(getLink(code));
+}
+
+export function incrementClickCount(code: string): void {
+  const statement = db.prepare(`
+    UPDATE links
+    SET click_count = click_count + 1
+    WHERE code = ?
+  `);
+
+  statement.run(code);
 }
